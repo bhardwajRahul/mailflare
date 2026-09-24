@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { messages } from "@/db/schema";
 import { storeMessageAttachments } from "@/lib/email/attachments";
+import { deleteMessageWithObjects } from "@/lib/email/message-cleanup";
 import { buildSnippet, parseRawMime } from "@/lib/email/parse";
 import { resolveThreadId } from "@/lib/email/threading";
 import { upsertContactFromAddress } from "@/lib/contacts/service";
@@ -64,6 +65,7 @@ async function importMessageToMailbox(
 	if (existing) return false;
 
 	const messageId = newId("msg");
+	const rawR2Key = `imports/${messageId}.eml`;
 	const fromAddr = parsed.fromAddr ?? "unknown";
 	const toAddr = parsed.toAddr ?? "";
 	const createdAt = parsed.date ?? new Date();
@@ -83,6 +85,7 @@ async function importMessageToMailbox(
 		snippet: buildSnippet(parsed.text, parsed.html),
 		textBody: parsed.text,
 		htmlBody: parsed.html,
+		rawR2Key,
 		status: placement.status,
 		read: placement.direction === "outbound",
 		threadId: await resolveThreadId(db, {
@@ -97,6 +100,9 @@ async function importMessageToMailbox(
 	});
 
 	try {
+		await env.BUCKET.put(rawR2Key, input.raw, {
+			httpMetadata: { contentType: "message/rfc822" },
+		});
 		await storeMessageAttachments(env, messageId, parsed.attachments, { validate: false });
 		const contactAddress = placement.direction === "outbound" ? toAddr : fromAddr;
 		await upsertContactFromAddress(env, {
@@ -105,7 +111,7 @@ async function importMessageToMailbox(
 			source: placement.direction === "outbound" ? "outbound" : "inbound",
 		});
 	} catch (error) {
-		await db.delete(messages).where(eq(messages.id, messageId));
+		await deleteMessageWithObjects(env, db, messageId, rawR2Key);
 		throw error;
 	}
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronRight, Cloud, ExternalLink } from "lucide-react";
+import { ArrowLeft, Cloud, ExternalLink } from "lucide-react";
 import dayjs from "dayjs";
 import { MarkAsRead } from "@/components/mark-read";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
@@ -16,6 +16,7 @@ import { MessageDetailSkeleton } from "@/components/page-skeletons";
 import { usePageLoading } from "@/components/page-loading";
 import { PreviousMessage } from "@/components/previous-message";
 import { ConversationThread } from "@/components/messages/conversation-thread";
+import { QuotedEmailToggle } from "@/components/messages/quoted-email-toggle";
 import { ThreadMessageActions } from "@/components/messages/thread-message-actions";
 import { SpamScoreDetails } from "@/components/messages/spam-score-details";
 import { useMessageThread } from "@/components/messages/use-message-thread";
@@ -34,6 +35,7 @@ import {
 } from "./utils";
 import { extractCloudAttachments } from "./cloud-attachment-utils";
 import { sanitizeEmailHtml } from "./email-html-sanitizer";
+import { collapseQuotedEmailHtml } from "./quote-collapse-utils";
 
 export default function MessageDetailPage() {
   const params = useParams<{ messageId: string }>();
@@ -125,19 +127,19 @@ export default function MessageDetailPage() {
     message.snippet,
     ownAddress,
   );
-  const htmlBody = sanitizeEmailHtml(
+  const htmlBody = collapseQuotedEmailHtml(sanitizeEmailHtml(
     resolveInlineAttachmentUrls(bodyDisplay.htmlBody, message.id, attachments),
-  );
-  const quotedHtml = sanitizeEmailHtml(
+  ));
+  const quotedHtml = collapseQuotedEmailHtml(sanitizeEmailHtml(
     resolveInlineAttachmentUrls(bodyDisplay.quotedHtml, message.id, attachments),
-  );
+  ), true);
   const cloudAttachmentResult = extractCloudAttachments(
     bodyDisplay.latestContent,
   );
   return (
     <div className="h-full overflow-y-auto overscroll-contain scrollbar-gutter-stable">
       {!message.read && <MarkAsRead messageId={message.id} />}
-      <div className="flex pt-3 pb-2.75 items-center justify-between px-2 border-b border-neutral-200 sticky top-0 bg-white">
+      <div className="flex pt-3 pb-2.75 items-center justify-between px-2 border-b border-neutral-200 sticky top-0 bg-white z-40">
         <div className="flex-1" />
         {/* <div className="flex items-center flex-row gap-6">
 					<Link
@@ -258,18 +260,7 @@ export default function MessageDetailPage() {
               {cloudAttachmentResult.content}
             </pre>
           )}
-          {quotedHtml && (
-            <details className="group mt-4 border-l-2 border-neutral-200 pl-4">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-2 text-xs font-medium text-neutral-500 hover:text-neutral-800">
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
-                <span>Quoted text</span>
-              </summary>
-              <div
-                className="email-body max-w-none pb-2 text-sm text-neutral-600"
-                dangerouslySetInnerHTML={{ __html: quotedHtml }}
-              />
-            </details>
-          )}
+          {quotedHtml && <QuotedEmailToggle html={quotedHtml} />}
           {bodyDisplay.quotedContent.map((quotedContent) => (
             <PreviousMessage
               key={`${quotedContent.dateLine}-${quotedContent.content.slice(0, 24)}`}

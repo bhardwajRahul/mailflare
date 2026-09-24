@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { ChevronsUpDown, Paperclip } from "lucide-react";
 import { ContactAvatar } from "@/components/contacts/contact-avatar";
+import { QuotedEmailToggle } from "@/components/messages/quoted-email-toggle";
 import { runSingleMessageAction } from "@/components/message-actions/utils";
 import { sanitizeEmailHtml } from "@/app/(dashboard)/inbox/[messageId]/email-html-sanitizer";
+import { collapseQuotedEmailHtml } from "@/app/(dashboard)/inbox/[messageId]/quote-collapse-utils";
 import { getMessageBodyDisplay, resolveInlineAttachmentUrls } from "@/app/(dashboard)/inbox/[messageId]/utils";
 
 import { cn } from "@/lib/utils";
@@ -122,12 +124,13 @@ export function ConversationMessageCard({
 
 	useEffect(() => setLocallyRead(message.read), [message.read]);
 
-	let body: { html: string | null; text: string } | null = null;
+	let body: { html: string | null; text: string; quotedHtml: string | null } | null = null;
 	if (expanded) {
 		const display = getMessageBodyDisplay(message.textBody, message.htmlBody, message.snippet);
 		body = {
-			html: sanitizeEmailHtml(resolveInlineAttachmentUrls(display.htmlBody, message.id, message.attachments)),
+			html: collapseQuotedEmailHtml(sanitizeEmailHtml(resolveInlineAttachmentUrls(display.htmlBody, message.id, message.attachments))),
 			text: display.latestContent,
+			quotedHtml: collapseQuotedEmailHtml(sanitizeEmailHtml(resolveInlineAttachmentUrls(display.quotedHtml, message.id, message.attachments)), true),
 		};
 	}
 
@@ -184,6 +187,7 @@ export function ConversationMessageCard({
 					) : (
 						<pre className="whitespace-pre-wrap font-sans text-sm text-neutral-900">{body.text}</pre>
 					)}
+					{body.quotedHtml && <QuotedEmailToggle html={body.quotedHtml} />}
 					{attachments.length > 0 && (
 						<ul className="mt-4 flex flex-wrap gap-2">
 							{attachments.map((attachment) => (

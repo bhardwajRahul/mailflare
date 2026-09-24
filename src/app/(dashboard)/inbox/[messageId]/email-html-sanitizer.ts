@@ -208,6 +208,17 @@ function sanitizeElement(element: Element): void {
 export function sanitizeEmailHtml(html: string | null): string | null {
 	if (!html) return null;
 	const document = new DOMParser().parseFromString(html, "text/html");
+	for (const blockquote of Array.from(document.body.querySelectorAll("blockquote"))) {
+		const introduction = blockquote.previousElementSibling;
+		if (
+			introduction instanceof HTMLElement &&
+			/^On\b[\s\S]*\bwrote:\s*$/i.test(introduction.textContent?.trim() ?? "") &&
+			!introduction.style.marginTop
+		) {
+			introduction.style.marginTop = "1.4em";
+			introduction.style.paddingBottom = "0.6em";
+		}
+	}
 	for (const element of Array.from(document.body.querySelectorAll("*"))) {
 		sanitizeElement(element);
 	}

@@ -1,8 +1,9 @@
 "use client";
 
 import { createElement, useEffect, useState } from "react";
-import { Ban, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, Star } from "lucide-react";
+import { Ban, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, Star } from "lucide-react";
 import { useCompose } from "@/components/compose/compose-context";
+import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { getOwnAddressForMessage } from "@/app/(dashboard)/inbox/[messageId]/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -29,6 +30,7 @@ export function ThreadMessageActions({
 	const { openDraftComposer } = useCompose();
 	const [starred, setStarred] = useState(message.starred);
 	const [moreOpen, setMoreOpen] = useState(false);
+	const [sourceOpen, setSourceOpen] = useState(false);
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const canReplyAll = hasAdditionalRecipients(message, ownAddresses);
@@ -181,6 +183,9 @@ export function ThreadMessageActions({
 						<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100" onClick={() => void onForward()}>
 							<Forward className="h-4 w-4" /> Forward
 						</button>
+						<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100" onClick={() => { setMoreOpen(false); setSourceOpen(true); }}>
+							<FileCode2 className="h-4 w-4" /> Show original
+						</button>
 						<hr className="my-1 border-neutral-100" />
 						<button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100" onClick={() => void onMessageAction(message.read ? "unread" : "read")}>
 							{message.read ? <Mail className="h-4 w-4" /> : <MailOpen className="h-4 w-4" />}
@@ -202,6 +207,7 @@ export function ThreadMessageActions({
 					</div>
 				)}
 			</div>
+			<MessageSourceDialog messageId={message.id} open={sourceOpen} onOpenChange={setSourceOpen} />
 		</div>
 	);
 }

@@ -2,8 +2,9 @@
 
 import { createElement, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Ban, BellOff, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, Trash2 } from "lucide-react";
+import { Archive, Ban, BellOff, FileCode2, Forward, Mail, MailOpen, MoreVertical, Reply, ReplyAll, ShieldAlert, Trash2 } from "lucide-react";
 import { useCompose } from "@/components/compose/compose-context";
+import { MessageSourceDialog } from "@/components/messages/message-source-dialog";
 import { useHotkeys, useShortcuts } from "@/components/shortcuts";
 import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -48,6 +49,7 @@ export function MessageActions({
 	>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [moreOpen, setMoreOpen] = useState(false);
+	const [sourceOpen, setSourceOpen] = useState(false);
 
 	const runAction = useCallback(async (action: BulkMessageAction) => {
 		setMoreOpen(false);
@@ -346,6 +348,15 @@ export function MessageActions({
 							<hr className="my-1 border-neutral-100" />
 								</>
 							)}
+							<button
+								type="button"
+								className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+								onClick={() => { setMoreOpen(false); setSourceOpen(true); }}
+							>
+								<FileCode2 className="h-4 w-4" />
+								Show original
+							</button>
+							<hr className="my-1 border-neutral-100" />
 							<p className="mt-1 px-3 pb-1 pt-2 text-sm font-medium text-neutral-500">
 								Move to
 							</p>
@@ -364,6 +375,7 @@ export function MessageActions({
 					)}
 				</div>
 			</div>
+			<MessageSourceDialog messageId={messageId} open={sourceOpen} onOpenChange={setSourceOpen} />
 		</div>
 	);
 }

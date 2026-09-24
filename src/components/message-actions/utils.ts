@@ -147,7 +147,7 @@ export function buildReplyQuote(
   return `\n\n${getEmailAddress(senderAddress)} wrote:\n${quoted}\n`;
 }
 
-const QUOTE_STYLE = "margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex";
+const QUOTE_STYLE = "margin:0 0 0 0;border-left:1px solid #ccc;padding-left:1ex;opacity:0.6";
 
 /**
  * The folded quote under a reply: the "On <date>, <sender> wrote:" line every
@@ -163,7 +163,7 @@ export function buildReplyQuoteHtml(
   if (!original) return null;
   const when = sentAt ? dayjs(sentAt).format("ddd, MMM D, YYYY [at] h:mm A") : "an earlier date";
   return wrapQuotedHtml(
-    `<div>On ${escapeHtml(when)}, ${escapeHtml(senderAddress)} wrote:</div><blockquote style="${QUOTE_STYLE}">${original}</blockquote>`,
+    `<div style="margin-top:1.4em">On ${escapeHtml(when)}, ${escapeHtml(senderAddress)} wrote:</div><blockquote style="${QUOTE_STYLE}">${original}</blockquote>`,
   );
 }
 
