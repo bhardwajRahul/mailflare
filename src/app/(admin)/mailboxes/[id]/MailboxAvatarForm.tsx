@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Camera, LoaderCircle, User } from "lucide-react";
 import { dispatchMailboxAvatarChanged } from "@/lib/mailboxes/avatar-client";
 import { Input } from "@/components/ui/input";
+import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import type { MailboxAvatarFormProps } from "./types";
 import {
 	getMailboxAvatarUrl,
@@ -74,7 +75,7 @@ export default function MailboxAvatarForm({
 				aria-label={hasAvatar ? `Change ${name} profile picture` : `Upload ${name} profile picture`}
 			>
 				{hasAvatar ? (
-					<img
+					<ProgressiveAvatarImage
 						src={avatarUrl}
 						alt={`${name} profile picture`}
 						className="h-full w-full object-cover"

@@ -10,6 +10,7 @@ export type MailboxSelectorUser = {
 
 export type AccountAvatarProps = {
 	name: string;
+	colorSeed?: string;
 	hasAvatar?: boolean;
 	avatarUrl?: string;
 	size?: "small" | "large";

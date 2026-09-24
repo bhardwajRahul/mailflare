@@ -4,15 +4,11 @@ import { getDb } from "@/db";
 import { contacts } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
+import { deleteAvatarImages, getAvatarImageResponse, getOptimizedAvatarFiles, storeAvatarImages } from "@/lib/avatar-images";
 import { getContactId } from "@/lib/contacts/utils";
 import { normalizeEmailAddress } from "@/lib/email/address";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
-import {
-	ALLOWED_AVATAR_TYPES,
-	MAX_AVATAR_SIZE,
-	avatarKeyFor,
-	isUploadedAvatarFile,
-} from "@/app/api/profile/avatar/utils";
+import { avatarKeyFor } from "@/app/api/profile/avatar/utils";
 import { getPersonalIdentityForAddress, syncPersonalIdentity } from "@/lib/profile/sync";
 import { contactAvatarKeyFor } from "./utils";
 
@@ -36,14 +32,7 @@ export async function GET(request: Request) {
 	const avatarKey = account ? account.avatarKey : contact?.avatarKey;
 	if (!avatarKey) return new Response("Not found", { status: 404 });
 
-	const object = await env.BUCKET.get(avatarKey);
-	if (!object) return new Response("Not found", { status: 404 });
-	const headers = new Headers();
-	headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
-	headers.set("X-Content-Type-Options", "nosniff");
-	headers.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; sandbox");
-	headers.set("Cache-Control", "private, no-cache");
-	return new Response(object.body, { headers });
+	return getAvatarImageResponse(request, env.BUCKET, avatarKey);
 }
 
 export async function POST(request: Request) {
@@ -59,15 +48,9 @@ export async function POST(request: Request) {
 	const addressEntry = form.get("address");
 	const mailboxId = typeof mailboxEntry === "string" ? mailboxEntry : "";
 	const email = normalizeEmailAddress(typeof addressEntry === "string" ? addressEntry : "");
-	const file = form.get("file");
-	if (!mailboxId || !email || !isUploadedAvatarFile(file)) {
+	const images = getOptimizedAvatarFiles(form);
+	if (!mailboxId || !email || !images) {
 		return NextResponse.json({ error: "Mailbox, contact, and image file are required" }, { status: 400 });
-	}
-	if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-		return NextResponse.json({ error: "Use a JPEG, PNG, WebP, or GIF image" }, { status: 400 });
-	}
-	if (file.size > MAX_AVATAR_SIZE) {
-		return NextResponse.json({ error: "Image must be 2 MB or smaller" }, { status: 413 });
 	}
 
 	const db = getDb(env);
@@ -79,9 +62,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Only the account owner can change this contact" }, { status: 403 });
 		}
 		const key = avatarKeyFor(account.userId);
-		await env.BUCKET.put(key, await file.arrayBuffer(), {
-			httpMetadata: { contentType: file.type },
-		});
+		await storeAvatarImages(env.BUCKET, key, images.full, images.preview);
 		await syncPersonalIdentity(db, { ...account, avatarKey: key });
 		return NextResponse.json({ ok: true });
 	}
@@ -100,9 +81,7 @@ export async function POST(request: Request) {
 	}
 
 	const key = contactAvatarKeyFor(access.mailbox.userId, email);
-	await env.BUCKET.put(key, await file.arrayBuffer(), {
-		httpMetadata: { contentType: file.type },
-	});
+	await storeAvatarImages(env.BUCKET, key, images.full, images.preview);
 	await db
 		.update(contacts)
 		.set({ avatarKey: key })
@@ -126,7 +105,7 @@ export async function DELETE(request: Request) {
 		if (account.userId !== user.id) {
 			return NextResponse.json({ error: "Only the account owner can change this contact" }, { status: 403 });
 		}
-		if (account.avatarKey) await env.BUCKET.delete(account.avatarKey);
+		if (account.avatarKey) await deleteAvatarImages(env.BUCKET, account.avatarKey);
 		await syncPersonalIdentity(db, { ...account, avatarKey: null });
 		return NextResponse.json({ ok: true });
 	}
@@ -135,7 +114,7 @@ export async function DELETE(request: Request) {
 		.from(contacts)
 		.where(and(eq(contacts.userId, access.mailbox.userId), eq(contacts.email, email)))
 		.limit(1);
-	if (contact?.avatarKey) await env.BUCKET.delete(contact.avatarKey);
+	if (contact?.avatarKey) await deleteAvatarImages(env.BUCKET, contact.avatarKey);
 	await db
 		.update(contacts)
 		.set({ avatarKey: null })

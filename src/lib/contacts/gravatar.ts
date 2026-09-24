@@ -1,4 +1,5 @@
 import { contactAvatarKeyFor } from "./avatar";
+import { avatarPreviewKeyFor } from "@/lib/avatar-images";
 
 const MAX_GRAVATAR_SIZE = 2 * 1024 * 1024;
 const ALLOWED_GRAVATAR_TYPES = new Set([
@@ -38,6 +39,18 @@ export async function importGravatarAvatar(
 
 		const key = contactAvatarKeyFor(userId, normalizedEmail);
 		await env.BUCKET.put(key, image, { httpMetadata: { contentType } });
+		try {
+			const previewResponse = await fetch(`https://gravatar.com/avatar/${hash}?d=404&r=g&s=16`);
+			if (previewResponse.ok) {
+				const previewType = previewResponse.headers.get("Content-Type")?.split(";", 1)[0]?.trim().toLowerCase();
+				const preview = await previewResponse.arrayBuffer();
+				if (previewType && ALLOWED_GRAVATAR_TYPES.has(previewType) && preview.byteLength <= 32 * 1024) {
+					await env.BUCKET.put(avatarPreviewKeyFor(key), preview, { httpMetadata: { contentType: previewType } });
+				}
+			}
+		} catch {
+			// The full avatar is still available if the preview request fails.
+		}
 		return key;
 	} catch {
 		return null;

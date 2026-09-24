@@ -1,4 +1,5 @@
 import { authFetch } from "@/lib/auth/client";
+import { appendOptimizedAvatar } from "@/lib/avatar-upload-client";
 import { clearMailboxesCache } from "@/components/mailbox-provider-utils";
 import {
 	PROFILE_AVATAR_ACCEPT,
@@ -18,7 +19,7 @@ export function validateMailboxAvatar(file: File): string | null {
 
 export async function uploadMailboxAvatar(mailboxId: string, file: File): Promise<void> {
 	const body = new FormData();
-	body.append("file", file, file.name);
+	await appendOptimizedAvatar(body, file);
 	const response = await authFetch(`/api/mailboxes/${mailboxId}/avatar`, {
 		method: "POST",
 		body,

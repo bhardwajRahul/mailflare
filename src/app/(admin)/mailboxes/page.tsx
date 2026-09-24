@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/select";
 import { List, ListRow } from "@/components/ui/list";
 import { SectionRowSkeleton } from "@/components/page-skeletons";
 import { clearMailboxesCache } from "@/components/mailbox-provider-utils";
+import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { authFetch } from "@/lib/auth/client";
 import type { CurrentAccountResponse, Domain, MailboxOwner, MailboxesResponse } from "./types";
 import { getMailboxAddress, getMailboxName } from "./utils";
@@ -251,11 +252,10 @@ export default function MailboxesPage() {
 									<span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
 										{getMailboxName(mailboxWithHostname).trim().charAt(0).toUpperCase() || "?"}
 										{mailbox.hasAvatar && (
-											<img
+											<ProgressiveAvatarImage
 												src={`/api/mailboxes/${mailbox.id}/avatar`}
 												alt={`${getMailboxName(mailboxWithHostname)} profile`}
 												className="absolute inset-0 h-full w-full object-cover"
-												onError={(event) => event.currentTarget.remove()}
 											/>
 										)}
 									</span>

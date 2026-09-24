@@ -5,9 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, Check, LogOut, Settings, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
+import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { isIdentityMailbox } from "@/components/mailbox-provider-utils";
 import { useMessageCounts } from "@/hooks/use-message-counts";
 import { authFetch } from "@/lib/auth/client";
+import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import { logoutClientSession } from "@/lib/auth/logout";
 import {
 	PROFILE_AVATAR_CHANGED_EVENT,
@@ -33,6 +35,7 @@ import {
 
 function AccountAvatar({
 	name,
+	colorSeed = name,
 	hasAvatar = false,
 	avatarUrl = "/api/profile/avatar",
 	size = "small",
@@ -47,8 +50,7 @@ function AccountAvatar({
 
 	if (hasAvatar && !imageFailed) {
 		return (
-			// eslint-disable-next-line @next/next/no-img-element
-			<img
+			<ProgressiveAvatarImage
 				src={avatarUrl}
 				alt={`${name} profile picture`}
 				className={`${sizeClass} shrink-0 rounded-full border border-neutral-200 object-cover`}
@@ -63,6 +65,7 @@ function AccountAvatar({
 	return (
 		<div
 			className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-blue-600 font-semibold text-white`}
+			style={getAvatarColorStyle(colorSeed)}
 			aria-hidden="true"
 		>
 			{getAccountInitial(name)}
@@ -81,6 +84,7 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 		>
 			<AccountAvatar
 				name={name}
+				colorSeed={getMailboxAddress(mailbox)}
 				hasAvatar={!!mailbox.hasAvatar || !!avatarUrl}
 				avatarUrl={avatarUrl ?? `/api/mailboxes/${mailbox.id}/avatar`}
 			/>
@@ -219,6 +223,7 @@ export function MailboxSelector() {
 			>
 				<AccountAvatar
 					name={selectedName}
+					colorSeed={selectedEmail || selectedName}
 					hasAvatar={selectedHasAvatar}
 					avatarUrl={selectedAvatarUrl}
 					onAvatarError={() => {
@@ -233,6 +238,7 @@ export function MailboxSelector() {
 						<div className="flex items-center gap-4">
 							<AccountAvatar
 								name={selectedName}
+								colorSeed={selectedEmail || selectedName}
 								hasAvatar={selectedHasAvatar}
 								avatarUrl={selectedAvatarUrl}
 								size="large"

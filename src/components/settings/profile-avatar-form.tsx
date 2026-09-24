@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, LoaderCircle, User } from "lucide-react";
 import { authFetch } from "@/lib/auth/client";
+import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import {
 	dispatchProfileAvatarChanged,
 	getProfileAvatarUrl,
 } from "@/lib/profile/avatar-client";
 import { dispatchMailboxAvatarChanged } from "@/lib/mailboxes/avatar-client";
 import { Input } from "@/components/ui/input";
+import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import type { ProfileAvatarFormProps, ProfileAvatarSessionResponse } from "./types";
 import {
 	getMailboxProfileAvatarUrl,
@@ -22,6 +24,7 @@ export function ProfileAvatarForm({
 	mailboxId,
 	initialHasAvatar = false,
 	name = "Profile",
+	colorSeed,
 }: ProfileAvatarFormProps) {
 	const [hasAvatar, setHasAvatar] = useState(initialHasAvatar);
 	const [avatarUrl, setAvatarUrl] = useState(
@@ -97,11 +100,11 @@ export function ProfileAvatarForm({
 				onClick={() => inputRef.current?.click()}
 				disabled={busy}
 				className="group relative h-24 w-24 overflow-hidden rounded-full border border-neutral-200 bg-blue-600 text-white shadow-sm outline-none ring-blue-500 transition focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-wait"
+				style={getAvatarColorStyle(colorSeed ?? mailboxId ?? name)}
 				aria-label={hasAvatar ? `Change ${name} profile picture` : `Upload ${name} profile picture`}
 			>
 				{hasAvatar ? (
-					// eslint-disable-next-line @next/next/no-img-element
-					<img
+					<ProgressiveAvatarImage
 						src={avatarUrl}
 						alt={`${name} profile picture`}
 						className="h-full w-full object-cover"

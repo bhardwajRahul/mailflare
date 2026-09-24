@@ -4,13 +4,9 @@ import { getDb } from "@/db";
 import { domains, mailboxes, users } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
+import { getAvatarImageResponse, getOptimizedAvatarFiles, storeAvatarImages } from "@/lib/avatar-images";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
-import {
-	ALLOWED_AVATAR_TYPES,
-	MAX_AVATAR_SIZE,
-	avatarKeyFor,
-	isUploadedAvatarFile,
-} from "@/app/api/profile/avatar/utils";
+import { avatarKeyFor } from "@/app/api/profile/avatar/utils";
 import { tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { syncPersonalIdentity } from "@/lib/profile/sync";
 import type { MailboxAvatarRouteParams } from "./types";
@@ -43,15 +39,7 @@ export async function GET(request: Request, { params }: MailboxAvatarRouteParams
 		: mailbox?.avatarKey;
 	if (!avatarKey) return new Response("Not found", { status: 404 });
 
-	const object = await env.BUCKET.get(avatarKey);
-	if (!object) return new Response("Not found", { status: 404 });
-
-	const headers = new Headers();
-	headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
-	headers.set("X-Content-Type-Options", "nosniff");
-	headers.set("Content-Security-Policy", "default-src 'none'; img-src 'self'; sandbox");
-	headers.set("Cache-Control", "private, no-cache");
-	return new Response(object.body, { headers });
+	return getAvatarImageResponse(request, env.BUCKET, avatarKey);
 }
 
 export async function POST(request: Request, { params }: MailboxAvatarRouteParams) {
@@ -70,16 +58,8 @@ export async function POST(request: Request, { params }: MailboxAvatarRouteParam
 	} catch {
 		return NextResponse.json({ error: "Expected multipart form data" }, { status: 400 });
 	}
-	const file = form.get("file");
-	if (!isUploadedAvatarFile(file)) {
-		return NextResponse.json({ error: "Missing image file" }, { status: 400 });
-	}
-	if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-		return NextResponse.json({ error: "Use a JPEG, PNG, WebP, or GIF image" }, { status: 400 });
-	}
-	if (file.size > MAX_AVATAR_SIZE) {
-		return NextResponse.json({ error: "Image must be 2 MB or smaller" }, { status: 413 });
-	}
+	const images = getOptimizedAvatarFiles(form);
+	if (!images) return NextResponse.json({ error: "A resized WebP image and preview are required" }, { status: 400 });
 
 	const [mailbox] = await db
 		.select({
@@ -100,9 +80,7 @@ export async function POST(request: Request, { params }: MailboxAvatarRouteParam
 	// The primary mailbox shares the account avatar; every other mailbox stores its own.
 	const identity = tracksAccountIdentity(mailbox, mailbox.ownerEmail);
 	const key = identity ? avatarKeyFor(mailbox.userId) : mailboxAvatarKeyFor(id);
-	await env.BUCKET.put(key, await file.arrayBuffer(), {
-		httpMetadata: { contentType: file.type },
-	});
+	await storeAvatarImages(env.BUCKET, key, images.full, images.preview);
 	if (identity) {
 		await syncPersonalIdentity(db, {
 			userId: mailbox.userId,

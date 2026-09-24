@@ -95,7 +95,7 @@ export function ProfileForm({
         className="space-y-6 rounded-b-lg rounded-t-3xl bg-white p-6"
       >
         <div className="flex items-center gap-4">
-          <ProfileAvatarForm name={name} />
+          <ProfileAvatarForm name={name} colorSeed={email} />
           <div>
             <p className="text-sm font-medium text-neutral-900">
               Profile picture

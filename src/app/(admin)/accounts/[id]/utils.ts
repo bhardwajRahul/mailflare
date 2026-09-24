@@ -1,4 +1,5 @@
 import { authFetch } from "@/lib/auth/client";
+import { appendOptimizedAvatar } from "@/lib/avatar-upload-client";
 import type {
 	AccountDetail,
 	AccountDetailResponse,
@@ -128,9 +129,13 @@ export async function saveManagedAccount(account: ManagedAccount): Promise<void>
 
 export async function uploadManagedAccountAvatar(accountId: string, file: File): Promise<void> {
 	const form = new FormData();
-	form.set("file", file);
+	await appendOptimizedAvatar(form, file);
 	const response = await authFetch(`/api/accounts/${accountId}/avatar`, { method: "POST", body: form });
 	if (!response.ok) throw new Error("Unable to update avatar");
+}
+
+export function getManagedAccountAvatarUrl(accountId: string, version: number): string {
+	return `/api/accounts/${accountId}/avatar${version ? `?v=${version}` : ""}`;
 }
 
 export async function fetchManagedMailboxes(accountId: string): Promise<ManagedMailbox[]> {

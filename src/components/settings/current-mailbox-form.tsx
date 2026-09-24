@@ -88,6 +88,7 @@ export function CurrentMailboxForm() {
 						mailboxId={selectedMailbox.id}
 						initialHasAvatar={!!selectedMailbox.hasAvatar}
 						name={selectedMailbox.displayName || selectedMailbox.localPart}
+						colorSeed={address}
 					/>
 					<form onSubmit={onSubmit} className="space-y-4">
 						<div className="space-y-2">

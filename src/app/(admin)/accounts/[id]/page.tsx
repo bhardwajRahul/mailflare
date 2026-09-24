@@ -6,10 +6,12 @@ import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
 import { Label } from "@/components/ui/label";
 import type { ManagedAccount } from "./types";
 import {
 	fetchManagedAccount,
+	getManagedAccountAvatarUrl,
 	saveManagedAccount,
 	uploadManagedAccountAvatar,
 } from "./utils";
@@ -66,7 +68,7 @@ export default function AccountDetailsPage() {
 					<span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xl font-semibold text-blue-700">
 						{account.name.charAt(0).toUpperCase()}
 						{account.hasAvatar && (
-							<img src={`/api/accounts/${id}/avatar?v=${avatarVersion}`} alt="" className="absolute inset-0 h-full w-full object-cover" />
+							<ProgressiveAvatarImage src={getManagedAccountAvatarUrl(id, avatarVersion)} alt="" className="absolute inset-0 h-full w-full object-cover" />
 						)}
 					</span>
 					<Label className="cursor-pointer">

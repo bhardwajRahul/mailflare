@@ -99,6 +99,7 @@ export type ProfileAvatarFormProps = {
 	mailboxId?: string;
 	initialHasAvatar?: boolean;
 	name?: string;
+	colorSeed?: string;
 };
 
 export type CurrentMailboxFormResponse = {
