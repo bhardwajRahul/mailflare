@@ -17,6 +17,20 @@ export const metadata: Metadata = {
 	title: "Mailflare",
 	description: "Multi-tenant email on Cloudflare",
 	icons: { icon: "/api/branding/icon" },
+	robots: {
+		index: false,
+		follow: false,
+		noarchive: true,
+		nosnippet: true,
+		noimageindex: true,
+		googleBot: {
+			index: false,
+			follow: false,
+			noarchive: true,
+			nosnippet: true,
+			noimageindex: true,
+		},
+	},
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

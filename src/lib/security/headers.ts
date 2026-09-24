@@ -15,6 +15,7 @@ const csp = [
 
 export function getSecurityHeaders() {
 	return [
+		{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet, noimageindex" },
 		{ key: "Content-Security-Policy", value: csp },
 		{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
 		{ key: "X-Content-Type-Options", value: "nosniff" },
