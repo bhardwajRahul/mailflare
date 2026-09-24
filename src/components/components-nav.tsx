@@ -8,6 +8,7 @@ import { getMessageDragData } from "@/lib/messages/drag-utils";
 import { useSelectedMailbox } from "./mailbox-provider";
 import { useSidebar } from "./sidebar-state";
 import { useCompose } from "./compose/compose-context";
+import { Tooltip } from "./ui/tooltip";
 import {
   preloadMailboxPage,
   waitForNavigationProgress,
@@ -67,12 +68,12 @@ export function NavItem({ link }: { link: NavLink }) {
     : {};
 
   if (link.href === "/compose") {
-    return (
+    const composeButton = (
       <button
         type="button"
         onClick={openComposer}
         className={classes}
-        title={minimal ? link.label : undefined}
+        aria-label={minimal ? link.label : undefined}
         {...dropProps}
       >
         <Icon
@@ -92,6 +93,7 @@ export function NavItem({ link }: { link: NavLink }) {
         )}
       </button>
     );
+    return minimal && link.label ? <Tooltip label={link.label} placement="right" className="mx-auto">{composeButton}</Tooltip> : composeButton;
   }
 
   async function navigate(event: MouseEvent<HTMLAnchorElement>) {
@@ -127,20 +129,11 @@ export function NavItem({ link }: { link: NavLink }) {
     }
   }
 
-  return (
-    <>
-      {navigationProgress !== null && (
-        <div className="fixed inset-x-0 top-0 z-[120] h-1 bg-blue-100">
-          <div
-            className="h-full bg-blue-600 transition-[width] duration-100 ease-out"
-            style={{ width: `${navigationProgress}%` }}
-          />
-        </div>
-      )}
+  const navLink = (
       <Link
         href={link.href}
         onClick={navigate}
-        title={minimal ? link.label : undefined}
+        aria-label={minimal ? link.label : undefined}
         className={cn(!minimal && "-ml-3 pl-6", classes)}
         {...dropProps}
       >
@@ -161,6 +154,19 @@ export function NavItem({ link }: { link: NavLink }) {
           </span>
         )}
       </Link>
+  );
+
+  return (
+    <>
+      {navigationProgress !== null && (
+        <div className="fixed inset-x-0 top-0 z-[120] h-1 bg-blue-100">
+          <div
+            className="h-full bg-blue-600 transition-[width] duration-100 ease-out"
+            style={{ width: `${navigationProgress}%` }}
+          />
+        </div>
+      )}
+      {minimal && link.label ? <Tooltip label={link.label} placement="right" className="mx-auto">{navLink}</Tooltip> : navLink}
     </>
   );
 }

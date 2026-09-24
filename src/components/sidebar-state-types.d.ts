@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 
 export type SidebarState = {
 	minimal: boolean;
+	width: number;
+	userId: string | null;
 	toggle(): void;
+	setWidth(width: number): void;
+	setForcedMinimal(minimal: boolean): void;
 };
 
 export type SidebarProviderProps = {

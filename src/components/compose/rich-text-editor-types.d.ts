@@ -10,6 +10,7 @@ export type RichTextEditorProps = {
 	className?: string;
 	toolbarStart?: React.ReactNode;
 	toolbarEnd?: React.ReactNode;
+	footerContent?: React.ReactNode;
 };
 
 export type ToolbarCommand = {

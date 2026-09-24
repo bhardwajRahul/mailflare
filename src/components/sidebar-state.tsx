@@ -1,12 +1,16 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { readColumnWidth } from "./column-width-preferences";
 import type { SidebarProviderProps, SidebarState } from "./sidebar-state-types";
 
-const SidebarContext = createContext<SidebarState>({ minimal: false, toggle: () => undefined });
+const SidebarContext = createContext<SidebarState>({ minimal: false, width: 260, userId: null, toggle: () => undefined, setWidth: () => undefined, setForcedMinimal: () => undefined });
 
-export function SidebarProvider({ children, expandedWidth = 240 }: SidebarProviderProps) {
+export function SidebarProvider({ children, expandedWidth = 260 }: SidebarProviderProps) {
 	const [minimal, setMinimal] = useState(false);
+	const [forcedMinimal, setForcedMinimal] = useState(false);
+	const [width, setWidth] = useState(expandedWidth);
+	const [userId, setUserId] = useState<string | null>(null);
 	const [storageKey, setStorageKey] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -20,11 +24,13 @@ export function SidebarProvider({ children, expandedWidth = 240 }: SidebarProvid
 			})
 			.then((data) => {
 				const userId = data?.user?.id;
-				if (!userId) return;
-				const key = `mailflare-sidebar-minimal:${userId}`;
+					if (!userId) return;
+					setUserId(userId);
+					const key = `mailflare-sidebar-minimal:${userId}`;
 				setStorageKey(key);
 				try {
-					setMinimal(localStorage.getItem(key) === "true");
+						setMinimal(localStorage.getItem(key) === "true");
+						setWidth(readColumnWidth(userId, "sidebar", expandedWidth, 200, 480));
 				} catch {
 					// Storage can be unavailable in private windows; keep the default.
 				}
@@ -33,6 +39,12 @@ export function SidebarProvider({ children, expandedWidth = 240 }: SidebarProvid
 	}, []);
 
 	function toggle() {
+		if (forcedMinimal) {
+			setForcedMinimal(false);
+			setMinimal(false);
+			if (storageKey) localStorage.setItem(storageKey, "false");
+			return;
+		}
 		setMinimal((current) => {
 			const next = !current;
 			if (storageKey) localStorage.setItem(storageKey, String(next));
@@ -41,8 +53,8 @@ export function SidebarProvider({ children, expandedWidth = 240 }: SidebarProvid
 	}
 
 	return (
-		<SidebarContext.Provider value={{ minimal, toggle }}>
-			<div className="h-full" style={{ "--sidebar-width": `${minimal ? 72 : expandedWidth}px` } as React.CSSProperties}>
+		<SidebarContext.Provider value={{ minimal: minimal || forcedMinimal, width, userId, toggle, setWidth, setForcedMinimal }}>
+			<div className="h-full" style={{ "--sidebar-width": `${minimal || forcedMinimal ? 72 : width}px` } as React.CSSProperties}>
 				{children}
 			</div>
 		</SidebarContext.Provider>

@@ -200,10 +200,11 @@ export default function MessageDetailPage() {
               managedAvatarUrl={message.direction === "outbound" && message.mailboxId
                 ? `/api/mailboxes/${message.mailboxId}/avatar`
                 : undefined}
+              className="mt-2"
             />
-            <div>
-              <p className="text-sm text-neutral-900 mt-1.25">
-                <b>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-neutral-900 mt-1.25 flex flex-row items-center gap-1 w-full  overflow-hidden">
+                <b className="whitespace-nowrap">
                   {message.direction === "inbound" ? (
                     <ContactDetailsTrigger
                       mailboxId={message.mailboxId}
@@ -214,7 +215,7 @@ export default function MessageDetailPage() {
                     fromName
                   )}
                 </b>{" "}
-                <span className="text-neutral-500">&lt;{fromAddress}&gt;</span>
+                <span className="text-neutral-500 text-xs flex-1 overflow-hidden text-ellipsis min-w-0">&lt;{fromAddress}&gt;</span>
               </p>
               <p className="text-xs text-neutral-500">
                 to{" "}

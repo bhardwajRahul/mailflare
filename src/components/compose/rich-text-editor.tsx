@@ -42,6 +42,7 @@ export function RichTextEditor({
 	className,
 	toolbarStart,
 	toolbarEnd,
+	footerContent,
 }: RichTextEditorProps) {
 	const editorRef = useRef<HTMLDivElement | null>(null);
 	const [active, setActive] = useState<Record<string, boolean>>({});
@@ -169,6 +170,7 @@ export function RichTextEditor({
 					</div>
 				)}
 			</div>
+			{footerContent}
 			<div className="relative flex items-center gap-0.5 border-t border-neutral-100 px-4 py-3">
 				{toolbarStart}
 				{COMMANDS.map((item) => (

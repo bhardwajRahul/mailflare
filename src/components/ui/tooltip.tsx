@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { TooltipPosition, TooltipProps } from "./tooltip-types";
 import { getTooltipPosition } from "./tooltip-utils";
 
-export function Tooltip({ label, children, className }: TooltipProps) {
+export function Tooltip({ label, children, className, placement = "auto" }: TooltipProps) {
 	const [open, setOpen] = useState(false);
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
 	const triggerRef = useRef<HTMLSpanElement>(null);
@@ -17,7 +17,7 @@ export function Tooltip({ label, children, className }: TooltipProps) {
 
 		function updatePosition() {
 			if (!triggerRef.current || !tooltipRef.current) return;
-			setPosition(getTooltipPosition(triggerRef.current, tooltipRef.current));
+			setPosition(getTooltipPosition(triggerRef.current, tooltipRef.current, placement));
 		}
 
 		updatePosition();
@@ -28,7 +28,7 @@ export function Tooltip({ label, children, className }: TooltipProps) {
 			window.removeEventListener("resize", updatePosition);
 			window.removeEventListener("scroll", updatePosition, true);
 		};
-	}, [label, open]);
+	}, [label, open, placement]);
 
 	return (
 		<span
