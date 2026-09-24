@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Forward, Minimize2, Paperclip, Reply, Trash2, X } from "lucide-react";
+import type { DragEvent } from "react";
+import { FileText, Forward, Maximize2, Minimize2, Paperclip, Reply, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,8 @@ export function ComposeForm({
 	const [attachments, setAttachments] = useState<ComposeAttachment[]>([]);
 	// Attachments the draft already holds server-side (a forwarded message's files).
 	const [storedAttachments, setStoredAttachments] = useState<ComposeStoredAttachment[]>([]);
+	const [draggingFiles, setDraggingFiles] = useState(false);
+	const [modalMode, setModalMode] = useState(false);
 	const [toast, setToast] = useState<Toast>(null);
 	const [loading, setLoading] = useState(false);
 	const [loadingDraft, setLoadingDraft] = useState(false);
@@ -65,6 +68,7 @@ export function ComposeForm({
 	const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const draftGeneration = useRef(0);
 	const attachmentInput = useRef<HTMLInputElement | null>(null);
+	const fileDragDepth = useRef(0);
 	const previousSignature = useRef("");
 
 	useEffect(() => {
@@ -124,10 +128,10 @@ export function ComposeForm({
 				setThreading(
 					draft.inReplyTo || draft.threadId
 						? {
-								inReplyTo: draft.inReplyTo ?? null,
-								references: draft.references ?? null,
-								threadId: draft.threadId ?? null,
-							}
+							inReplyTo: draft.inReplyTo ?? null,
+							references: draft.references ?? null,
+							threadId: draft.threadId ?? null,
+						}
 						: null,
 				);
 				setSubject(draft.subject ?? "");
@@ -357,6 +361,32 @@ export function ComposeForm({
 		if (attachmentInput.current) attachmentInput.current.value = "";
 	}
 
+	function onFileDragEnter(event: DragEvent<HTMLFormElement>) {
+		if (!event.dataTransfer.types.includes("Files")) return;
+		fileDragDepth.current += 1;
+		if (!loading && !loadingDraft) setDraggingFiles(true);
+	}
+
+	function onFileDragOver(event: DragEvent<HTMLFormElement>) {
+		if (!event.dataTransfer.types.includes("Files")) return;
+		event.preventDefault();
+		event.dataTransfer.dropEffect = loading || loadingDraft ? "none" : "copy";
+	}
+
+	function onFileDragLeave(event: DragEvent<HTMLFormElement>) {
+		if (!event.dataTransfer.types.includes("Files")) return;
+		fileDragDepth.current = Math.max(0, fileDragDepth.current - 1);
+		if (fileDragDepth.current === 0) setDraggingFiles(false);
+	}
+
+	function onFileDrop(event: DragEvent<HTMLFormElement>) {
+		if (!event.dataTransfer.types.includes("Files")) return;
+		event.preventDefault();
+		fileDragDepth.current = 0;
+		setDraggingFiles(false);
+		if (!loading && !loadingDraft) addAttachments(event.dataTransfer.files);
+	}
+
 	function selectSender(value: string) {
 		const option = senderOptions.find((item) => `${item.mailbox.id}|${item.address}` === value);
 		if (!option) return;
@@ -364,24 +394,80 @@ export function ComposeForm({
 		if (selectedMailbox?.id !== option.mailbox.id) setSelectedMailbox(option.mailbox);
 	}
 
+	const attachmentContent = (attachments.length > 0 || storedAttachments.length > 0) && (
+		<div className="flex min-w-0 flex-nowrap gap-2 overflow-x-auto overflow-y-hidden px-3 py-2">
+			{storedAttachments.map((attachment) => (
+				<div
+					key={attachment.id}
+					className="flex max-w-full shrink-0 items-center gap-2 rounded-lg bg-neutral-100 px-2 py-1 text-xs"
+					title="Carried over from the forwarded message"
+				>
+					<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+					<span className="max-w-48 truncate">{attachment.filename}</span>
+					<span className="text-xs text-neutral-400">{formatAttachmentSize(attachment.size)}</span>
+					<button
+						type="button"
+						onClick={() => void removeStoredAttachment(attachment.id)}
+						className="rounded-full p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
+					>
+						<X className="h-3.5 w-3.5" />
+						<span className="sr-only">Remove attachment</span>
+					</button>
+				</div>
+			))}
+			{attachments.map((attachment) => (
+				<div
+					key={attachment.id}
+					className="flex max-w-full shrink-0 items-center gap-2 rounded-lg bg-neutral-100 px-2 py-1 text-xs"
+				>
+					<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
+					<span className="max-w-48 truncate font-medium">{attachment.file.name}</span>
+					<span className="text-xs text-neutral-400">
+						{formatAttachmentSize(attachment.file.size)}
+					</span>
+					<button
+						type="button"
+						onClick={() =>
+							setAttachments((current) =>
+								current.filter((item) => item.id !== attachment.id),
+							)
+						}
+						className="rounded-full p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
+					>
+						<X className="h-3.5 w-3.5" />
+						<span className="sr-only">Remove attachment</span>
+					</button>
+				</div>
+			))}
+		</div>
+	);
+
 	const frameClass =
 		mode === "popup"
-			? "fixed bottom-4 right-4 z-40 flex h-[min(520px,calc(100vh-88px))] w-[min(560px,calc(100vw-32px))] flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xl"
-			: "flex h-full min-h-[720px] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm";
+			? modalMode
+				? "fixed left-1/2 top-1/2 z-50 flex h-[86vh] w-[min(860px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+				: "fixed bottom-4 right-4 z-40 flex h-[min(520px,calc(100vh-88px))] w-[min(560px,calc(100vw-32px))] flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xl"
+			: "relative flex h-full min-h-[720px] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm";
 
 	return (
 		<>
+			{mode === "popup" && modalMode && <div className="fixed inset-0 z-40 bg-neutral-950/65" aria-hidden="true" />}
 			{toast && (
 				<div
 					className={cn(
-						"fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg",
+						"fixed right-6 top-6 z-[60] rounded-lg px-4 py-3 text-sm font-medium shadow-lg",
 						toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white",
 					)}
 				>
 					{toast.message}
 				</div>
 			)}
-			<form onSubmit={onSubmit} className={frameClass}>
+			<form onSubmit={onSubmit} className={frameClass} role={modalMode ? "dialog" : undefined} aria-modal={modalMode || undefined} aria-label={modalMode ? "Compose message" : undefined} onKeyDown={(event) => { if (modalMode && event.key === "Escape") { event.preventDefault(); setModalMode(false); } }} onDragEnterCapture={onFileDragEnter} onDragOverCapture={onFileDragOver} onDragLeaveCapture={onFileDragLeave} onDropCapture={onFileDrop}>
+				{draggingFiles && (
+					<div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-blue-400 bg-blue-50/90 text-sm font-medium text-blue-700" aria-hidden="true">
+						Drop files to attach
+					</div>
+				)}
 				<div className="flex h-9 items-center justify-between bg-neutral-800 px-4 text-sm font-medium text-white">
 					<span className="flex items-center gap-2">
 						{threading?.inReplyTo && <Reply className="h-3.5 w-3.5 text-neutral-300" />}
@@ -398,8 +484,10 @@ export function ComposeForm({
 					</span>
 					{mode === "popup" && (
 						<div className="flex items-center gap-3 text-neutral-300">
-							<Minimize2 className="h-4 w-4" />
-							<button type="button" onClick={onClose}>
+							<button type="button" onClick={() => setModalMode((current) => !current)} aria-label={modalMode ? "Restore floating composer" : "Open composer as modal"} title={modalMode ? "Restore floating composer" : "Open composer as modal"} className="rounded p-1 hover:bg-neutral-700 hover:text-white">
+								{modalMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+							</button>
+							<button type="button" onClick={onClose} aria-label="Close composer" className="rounded p-1 hover:bg-neutral-700 hover:text-white">
 								<X className="h-4 w-4" />
 							</button>
 						</div>
@@ -488,6 +576,7 @@ export function ComposeForm({
 					quotedHtml={quotedHtml}
 					disabled={loadingDraft}
 					placeholder="Write your message"
+					footerContent={attachmentContent}
 					toolbarStart={
 						<>
 							<div className="flex items-center">
@@ -543,53 +632,6 @@ export function ComposeForm({
 						</>
 					}
 				/>
-				{(attachments.length > 0 || storedAttachments.length > 0) && (
-					<div className="flex flex-wrap gap-2 border-t border-neutral-100 px-4 py-3">
-						{storedAttachments.map((attachment) => (
-							<div
-								key={attachment.id}
-								className="flex max-w-full items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
-								title="Carried over from the forwarded message"
-							>
-								<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
-								<span className="max-w-48 truncate">{attachment.filename}</span>
-								<span className="text-xs text-neutral-400">{formatAttachmentSize(attachment.size)}</span>
-								<button
-									type="button"
-									onClick={() => void removeStoredAttachment(attachment.id)}
-									className="rounded-full p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
-								>
-									<X className="h-3.5 w-3.5" />
-									<span className="sr-only">Remove attachment</span>
-								</button>
-							</div>
-						))}
-						{attachments.map((attachment) => (
-							<div
-								key={attachment.id}
-								className="flex max-w-full items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
-							>
-								<FileText className="h-4 w-4 shrink-0 text-neutral-500" />
-								<span className="max-w-48 truncate">{attachment.file.name}</span>
-								<span className="text-xs text-neutral-400">
-									{formatAttachmentSize(attachment.file.size)}
-								</span>
-								<button
-									type="button"
-									onClick={() =>
-										setAttachments((current) =>
-											current.filter((item) => item.id !== attachment.id),
-										)
-									}
-									className="rounded-full p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
-								>
-									<X className="h-3.5 w-3.5" />
-									<span className="sr-only">Remove attachment</span>
-								</button>
-							</div>
-						))}
-					</div>
-				)}
 			</form>
 		</>
 	);
