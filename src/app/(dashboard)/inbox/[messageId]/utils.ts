@@ -71,9 +71,12 @@ export function getMessageBodyDisplay(
 
 	return {
 		...parts,
-		htmlBody: parts.quotedContent.length > 0 ? null : htmlBody ?? null,
+		// External HTML quotes are part of the sender's layout. Rendering the
+		// generated text instead adds line breaks between their HTML blocks.
+		quotedContent: htmlBody ? [] : parts.quotedContent,
+		htmlBody: htmlBody ?? null,
 		quotedHtml: null,
-		hasQuotedContent: parts.quotedContent.length > 0,
+		hasQuotedContent: !htmlBody && parts.quotedContent.length > 0,
 	};
 }
 
